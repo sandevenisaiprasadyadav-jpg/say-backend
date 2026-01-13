@@ -36,3 +36,18 @@ class Transaction(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     user = relationship("User")
+from sqlalchemy import Boolean
+
+class FixedDeposit(Base):
+    __tablename__ = "fixed_deposits"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    amount = Column(Float)
+    interest_rate = Column(Float)  # yearly %
+    duration_days = Column(Integer)
+    start_date = Column(DateTime, default=datetime.utcnow)
+    maturity_date = Column(DateTime)
+    is_closed = Column(Boolean, default=False)
+
+    user = relationship("User")

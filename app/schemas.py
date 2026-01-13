@@ -36,3 +36,19 @@ class TransactionResponse(BaseModel):
 
     class Config:
         from_attributes = True
+class FDCreateRequest(BaseModel):
+    amount: float
+    interest_rate: float
+    duration_days: int
+
+
+class FDResponse(BaseModel):
+    id: int
+    amount: float
+    interest_rate: float
+    duration_days: int
+    maturity_date: datetime
+    is_closed: bool
+
+    class Config:
+        from_attributes = True
