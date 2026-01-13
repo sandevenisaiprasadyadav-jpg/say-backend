@@ -1,22 +1,51 @@
-from fastapi import APIRouter, Depends, HTTPException, Header
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from app.database import get_db
-from app import models, schemas
-from app.utils import get_user_id_from_token
-router = APIRouter()
-def get_user(db: Session, Authorization: str):
-    if not Authorization:
-        raise HTTPException(401, "Missing Authorization")
+from app.database import SessionLocal
+from app.models import Wallet, Transaction
+from app.schemas import WalletResponse, AddMoneyRequest
+
+router = APIRouter(prefix="/wallet", tags=["Wallet"])
+
+
+def get_db():
+    db = SessionLocal()
     try:
-        user_id = get_user_id_from_token(Authorization)
-    except Exception:
-        raise HTTPException(401, "Invalid token")
-    user = db.query(models.User).filter(models.User.id == user_id).first()
-    if not user:
-        raise HTTPException(404, "User not found")
-    return user
-@router.get("/")
-def get_wallet(Authorization: str = Header(None), db: Session = Depends(get_db)):
-    user = get_user(db, Authorization)
-    w = db.query(models.Wallet).filter(models.Wallet.user_id == user.id).first()
-    return {"balance": w.balance}
+        yield db
+    finally:
+        db.close()
+
+
+@router.get("/{user_id}", response_model=WalletResponse)
+def get_wallet(user_id: int, db: Session = Depends(get_db)):
+    wallet = db.query(Wallet).filter(Wallet.user_id == user_id).first()
+    if not wallet:
+        wallet = Wallet(user_id=user_id, balance=0.0)
+        db.add(wallet)
+        db.commit()
+        db.refresh(wallet)
+    return wallet
+
+
+@router.post("/{user_id}/add")
+def add_money(user_id: int, request: AddMoneyRequest, db: Session = Depends(get_db)):
+    if request.amount <= 0:
+        raise HTTPException(status_code=400, detail="Invalid amount")
+
+    wallet = db.query(Wallet).filter(Wallet.user_id == user_id).first()
+    if not wallet:
+        wallet = Wallet(user_id=user_id, balance=0.0)
+        db.add(wallet)
+
+    wallet.balance += request.amount
+
+    transaction = Transaction(
+        user_id=user_id,
+        amount=request.amount,
+        transaction_type="CREDIT",
+        description="Money added to wallet"
+    )
+
+    db.add(transaction)
+    db.commit()
+
+    return {"message": "Money added successfully", "balance": wallet.balance}

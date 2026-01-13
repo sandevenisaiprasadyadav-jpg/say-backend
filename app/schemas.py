@@ -13,3 +13,26 @@ class FDCreate(BaseModel):
 class CreateOrderIn(BaseModel):
     amount: int
     currency: str = "INR"
+from pydantic import BaseModel
+from datetime import datetime
+
+
+class WalletResponse(BaseModel):
+    balance: float
+
+    class Config:
+        from_attributes = True
+
+
+class AddMoneyRequest(BaseModel):
+    amount: float
+
+
+class TransactionResponse(BaseModel):
+    amount: float
+    transaction_type: str
+    description: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
